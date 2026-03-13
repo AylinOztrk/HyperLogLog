@@ -1,1 +1,98 @@
-📊 Büyük Veri Analitiği: HyperLogLog Tasarımı ve GerçeklemesiBu proje, Büyük Veri Analitiği dersi kapsamında, devasa veri kümelerinde benzersiz öğe sayısını (Cardinality Estimation) tahmin etmek için kullanılan olasılıksal bir veri yapısı olan HyperLogLog (HLL) algoritmasını içermektedir.📑 İçindekilerProje HakkındaAlgoritma TasarımıTeknik DetaylarKurulum ve KullanımTeorik Analiz ve Hata SınırlarıAgentic Kodlama Süreci🧐 Proje HakkındaGeleneksel veri yapılarında (örneğin Java HashSet veya HashMap), 1 milyar benzersiz öğeyi saklamak ve saymak için onlarca GB RAM gerekir. HyperLogLog, bu işlemi %98+ doğruluk oranıyla sadece birkaç kilobayt bellek kullanarak çözer. Bu proje, bu algoritmanın temel bileşenlerini (Hashing, Bucketing, Harmonik Ortalama) Java dilinde "sıfırdan" gerçekler.🛠 Algoritma TasarımıAlgoritma üç ana aşamadan oluşur:1. Yüksek Kaliteli HashingVeriler, bit dağılımının üniform olması için SHA-256 algoritması ile hash'lenir. Bu, verilerin kovalara (buckets) dengeli dağılmasını sağlar.2. Kovalar ve Register Yapısı (Bucketing)Hash değerinin ilk $p$ biti, verinin hangi "kova"ya (register) yazılacağını belirler. Toplam kova sayısı $m = 2^p$ olarak hesaplanır. Her kova, o grupta görülen en uzun ardışık sıfır dizisini saklar.3. Harmonik Ortalama ve DüzeltmeNihai tahmin, aritmetik ortalama yerine uç değerlere karşı daha dirençli olan Harmonik Ortalama ile hesaplanmaktadır:$$E = \alpha_m \cdot m^2 \cdot \left( \sum_{j=1}^{m} 2^{-M[j]} \right)^{-1}$$🚀 Teknik DetaylarBirleştirilebilirlik (Mergeability): Algoritma, iki farklı veri kaynağından gelen HLL yapılarını veri kaybı olmadan birleştirebilir. Bu, dağıtık sistemlerde (MapReduce, Spark vb.) paralel sayım yapılmasına olanak tanır.Küçük Veri Düzeltmesi (Linear Counting): Veri seti küçük olduğunda (tahmin < $2.5m$), algoritma otomatik olarak boş kovaları sayan logaritmik düzeltme formülüne geçer.Bellek Verimliliği: $p=12$ hassasiyetinde, algoritma sadece 4096 byte (4 KB) yer kaplar.📈 Teorik Analiz ve Hata SınırlarıHLL algoritmasında kova sayısı ($m$) arttıkça hata payı azalır. Teorik hata sınırı (Standard Error) şu formülle belirlenir:$$SE \approx \frac{1.04}{\sqrt{m}}$$Hassasiyet (p)Bellek KullanımıTeorik Hata (SE)10 (1024 kova)1 KB~3.25%12 (4096 kova)4 KB~1.62%14 (16384 kova)16 KB~0.81%Gözlem: Analizlerimiz sonucunda $m$ değerinin her 4 kat artışında, tahmin hatasının yaklaşık yarı yarıya düştüğü matematiksel olarak doğrulanmıştır.🤖 Agentic Kodlama SüreciBu proje, Agentic Kodlama metodolojisi ile geliştirilmiştir:LLM Kullanımı: Algoritmanın matematiksel modellemesi ve Java implementasyonu aşamasında Gemini / Claude modellerinden yararlanılmıştır.Iterative Development: Kod, önce temel register yapısı, ardından düzeltme faktörleri ve en son merge özelliği eklenecek şekilde adım adım (agent rehberliğinde) geliştirilmiştir.IDE: Geliştirme sürecinde IntelliJ IDEA / Cursor kullanılmıştır.
+HyperLogLog Cardinality Estimation
+Proje Hakkında
+
+Bu proje, büyük veri analitiğinde kullanılan HyperLogLog (HLL) algoritmasının Java dili ile sıfırdan tasarlanıp gerçeklenmesini amaçlamaktadır.
+
+HyperLogLog algoritması, büyük veri kümelerinde distinct (benzersiz) eleman sayısını düşük bellek kullanarak yaklaşık olarak tahmin eden bir olasılıksal veri yapısıdır.
+
+Klasik yöntemlerle distinct sayısını hesaplamak için tüm verilerin saklanması gerekir. Ancak veri miktarı milyonlarca veya milyarlarca olduğunda bu yöntem hem bellek hem de işlem maliyeti açısından verimsiz hale gelir.
+
+HyperLogLog algoritması ise yalnızca küçük bir register dizisi kullanarak veri kümesinin büyüklüğünü yüksek doğrulukla tahmin edebilir.
+
+Bu nedenle HyperLogLog algoritması günümüzde birçok büyük veri sisteminde kullanılmaktadır.
+
+Örnek kullanım alanları:
+
+Web sitelerindeki benzersiz ziyaretçi sayısını tahmin etmek
+
+Bir veri akışındaki benzersiz IP adreslerini saymak
+
+Event log sistemlerinde farklı olay sayısını hesaplamak
+
+HyperLogLog Algoritmasının Çalışma Mantığı
+
+HyperLogLog algoritması üç temel bileşenden oluşur:
+
+1. Hash Fonksiyonu
+
+Algoritma, veri elemanlarını rastgele bir bit dizisine dönüştürmek için bir hash fonksiyonu kullanır.
+
+Bu projede SHA-256 hash algoritması kullanılmıştır.
+
+Hash fonksiyonu sayesinde veriler istatistiksel olarak rastgele dağılır ve algoritmanın doğruluğu korunur.
+
+2. Bucketing (Kovalama Mekanizması)
+
+Hash değerinin ilk bitleri kullanılarak veriler kovalara ayrılır.
+
+Kova sayısı şu şekilde hesaplanır:
+
+m = 2^p
+
+Burada:
+
+p → precision (hassasiyet parametresi)
+
+m → toplam kova sayısıdır.
+
+Kova sayısı arttıkça algoritmanın doğruluğu artar ancak kullanılan bellek miktarı da artar.
+
+3. Register Yapısı
+
+Her kova için bir register tutulur.
+
+Register içinde hash değerindeki ardışık sıfır sayısı (leading zeros) saklanır.
+
+Eğer yeni gelen verinin leading zero değeri daha büyükse register güncellenir.
+
+Cardinality Tahmini
+
+Tüm register değerleri kullanılarak veri kümesinin büyüklüğü tahmin edilir.
+
+HyperLogLog algoritması tahmin için harmonik ortalama kullanır.
+
+Tahmin formülü:
+
+E = αₘ · m² · ( Σ 2⁻ᴹⁱ )⁻¹
+
+Burada:
+
+m register sayısıdır
+
+αₘ düzeltme katsayısıdır
+
+M[i] register değeridir
+
+Small Range Correction
+
+Küçük veri setlerinde hata oranını azaltmak için Linear Counting yöntemi uygulanır.
+
+Boş register sayısı kullanılarak yeni bir tahmin yapılır.
+
+Formül:
+
+E = m · ln(m / V)
+
+Burada:
+
+V boş register sayısını ifade eder.
+
+Merge (Birleştirilebilirlik)
+
+HyperLogLog algoritmasının önemli özelliklerinden biri birleştirilebilir olmasıdır.
+
+İki farklı HLL yapısı şu şekilde birleştirilebilir:
+
+Her register için maksimum değer alınır.
+
+Bu özellik sayesinde HyperLogLog algoritması dağıtık sistemlerde paralel çalışabilir.
